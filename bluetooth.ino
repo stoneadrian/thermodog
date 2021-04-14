@@ -6,8 +6,15 @@ BLEUnsignedCharCharacteristic tempLevelChar("2101", BLERead | BLENotify | BLEWri
 BLEUnsignedCharCharacteristic tempReadChar("2102", BLERead | BLENotify | BLEWrite);
 SevSeg sevseg;
 
+unsigned long prevUpdate = 0;
+int masterTemp = 72;
+
 void setup()
 {
+  const int decrementPin = A7;
+  const int incrementPin = A6;
+  pinMode(decrementPin, INPUT);
+  pinMode(incrementPin, INPUT);
   byte numDigits = 4;
   byte digitPins[] = {12, 11, 8, 6};
   byte segmentPins[] = {10, 7, 4, 3, 2, 9, 5, 13};
@@ -36,8 +43,8 @@ void setup()
   Serial.println("Bluetooth device active, waiting for connections...");
 }
 
-unsigned long prevUpdate = 0;
-int masterTemp = 72;
+int decrementState = 0;
+int incrementState = 0;
 
 void loop()
 {
@@ -57,23 +64,34 @@ void loop()
     }
     Serial.println();
     int_temp = int_temp / 5;
-    int_temp = int_temp*100;
+    int_temp = int_temp * 100;
     int_temp = int_temp + masterTemp;
-    sevseg.setNumber(int_temp,2);
+    sevseg.setNumber(int_temp, 2);
     if (central)
     {
       Serial.print("Connected to central: ");
       digitalWrite(LED_BUILTIN, HIGH);
-      
+
       tempLevelChar.writeValue(int_temp);
       byte value = masterTemp;
       tempReadChar.readValue(value);
-      if(value != 0){
+      if (value != 0)
+      {
         masterTemp = value;
         Serial.println(value);
       }
     }
     Serial.println(int_temp);
-  } 
+  }
+  decrementState = digitalRead(decrementPin);
+  incrementState = digitalRead(incrementPin);
+  if (decrementState == HIGH)
+  {
+    masterTemp = masterTemp - 1;
+  }
+  if (incrementState == HIGH)
+  {
+    masterTemp = masterTemp + 1;
+  }
   sevseg.refreshDisplay();
 }
