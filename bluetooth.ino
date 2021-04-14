@@ -54,7 +54,7 @@ void loop()
   BLEDevice central = BLE.central();
   int int_temp = 0;
 
-  if (currentUpdate - prevUpdate >= 1000)
+  if (currentUpdate - prevUpdate >= 500)
   {
     prevUpdate = currentUpdate;
     for (int i = 0; i < 5; i++)
@@ -83,22 +83,21 @@ void loop()
       }
     }
     Serial.println(displayTemp);
+    decrementState = digitalRead(decrementPin);
+    incrementState = digitalRead(incrementPin);
+    if (decrementState == HIGH)
+    {
+      masterTemp = masterTemp - 1;
+      displayTemp = displayTemp - 1;
+      sevseg.setNumber(displayTemp, 2);
+    }
+    if (incrementState == HIGH)
+    {
+      masterTemp = masterTemp + 1;
+      displayTemp = displayTemp + 1;
+      sevseg.setNumber(displayTemp, 2);
+    }
   }
-  decrementState = digitalRead(decrementPin);
-  incrementState = digitalRead(incrementPin);
-  Serial.println(decrementState);
-    Serial.println(incrementState);
-  if (decrementState == HIGH)
-  {
-    masterTemp = masterTemp - 1;
-    displayTemp = displayTemp - 1;
-    sevseg.setNumber(displayTemp, 2);
-  }
-  if (incrementState == HIGH)
-  {
-     masterTemp = masterTemp + 1;
-    displayTemp = displayTemp + 1;
-    sevseg.setNumber(displayTemp, 2);
-  }
+
   sevseg.refreshDisplay();
 }
