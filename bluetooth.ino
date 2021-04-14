@@ -13,7 +13,7 @@ const int incrementPin = A6;
 int decrementState = 0;
 int incrementState = 0;
 int displayTemp = 0;
-int displayTempVariances[5];
+int displayTempVariances[10];
 int displayTempPos = 0;
 void setup()
 {
@@ -56,26 +56,25 @@ void loop()
   if (currentUpdate - prevUpdate >= 500)
   {
     prevUpdate = currentUpdate;
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 1000; i++)
     {
       float tmpVoltage = analogRead(A3) * 3.3 / 1023.0;
       float temp = 80.336304700162070 * tmpVoltage + -16.081977309562400;
       temp = temp * 1.8 + 32;
       int_temp += (int)temp;
+      sevseg.refreshDisplay();
     }
     Serial.println();
-    int_temp = int_temp / 5;
+    int_temp = int_temp / 1000;
     int_temp = (int_temp * 100) + masterTemp;
-    if (displayTemp == 0 || displayTemp == int_temp)
+    displayTempVariances[displayTempPos++] = int_temp;
+    if (displayTemp == 0)
     {
       displayTemp = int_temp;
     }
-    else
+    else if(displayTempPos == 9)
     {
       int sameCount = 0;
-      displayTempVariances[displayTempPos++] = int_temp;
-      if (displayTempPos == 9)
-      {
         for (int i = 0; i < 10; i++)
         {
           if (displayTempVariances[i] == displayTemp)
@@ -83,8 +82,7 @@ void loop()
             sameCount++;
           }
         }
-      }
-      if (sameCount < 4)
+      if (sameCount < 6)
       {
         displayTemp = int_temp;
       }
