@@ -1,69 +1,81 @@
 #include <ArduinoBLE.h>
+#include "SevSeg.h"
+
 BLEService tempService("1101");
 BLEUnsignedCharCharacteristic tempLevelChar("2101", BLERead | BLENotify | BLEWrite);
 BLEUnsignedCharCharacteristic tempReadChar("2102", BLERead | BLENotify | BLEWrite);
+SevSeg sevseg;
 
-void setup() {
-Serial.begin(9600);
-
-pinMode(LED_BUILTIN, OUTPUT);
-if (!BLE.begin()) 
+void setup()
 {
-Serial.println("starting BLE failed!");
-while (1);
+  byte numDigits = 4;
+  byte digitPins[] = {12, 11, 8, 6};
+  byte segmentPins[] = {10, 7, 4, 3, 2, 9, 5, 13};
+  bool resistorsOnSegments = false;
+  byte hardwareConfig = COMMON_ANODE;
+  bool updateWithDelays = false;
+  bool leadingZeros = false;
+  bool disableDecPoint = false;
+  sevseg.begin(hardwareConfig, numDigits, digitPins, segmentPins, resistorsOnSegments,
+               updateWithDelays, leadingZeros, disableDecPoint);
+  Serial.begin(9600);
+
+  pinMode(LED_BUILTIN, OUTPUT);
+  if (!BLE.begin())
+  {
+    Serial.println("starting BLE failed!");
+  }
+
+  BLE.setLocalName("TemperatureMonitor");
+  BLE.setAdvertisedService(tempService);
+  tempService.addCharacteristic(tempLevelChar);
+  tempService.addCharacteristic(tempReadChar);
+  BLE.addService(tempService);
+
+  BLE.advertise();
+  Serial.println("Bluetooth device active, waiting for connections...");
 }
 
-BLE.setLocalName("BatteryMonitor");
-BLE.setAdvertisedService(tempService);
-tempService.addCharacteristic(tempLevelChar);
-tempService.addCharacteristic(tempReadChar);
-BLE.addService(tempService);
+unsigned long prevUpdate = 0;
+int masterTemp = 72;
 
-BLE.advertise();
-Serial.println("Bluetooth device active, waiting for connections...");
-}
-
-void loop() 
+void loop()
 {
-BLEDevice central = BLE.central();
+  unsigned long currentUpdate = millis();
 
-if (central) 
-{
-Serial.print("Connected to central: ");
-Serial.println(central.address());
-digitalWrite(LED_BUILTIN, HIGH);
-
-while (central.connected()) {
-
-      /*int battery = analogRead(A0);
-      int batteryLevel = map(battery, 0, 1023, 0, 100);
-      Serial.print("Battery Level % is now: ");
-      Serial.println(batteryLevel);
+  BLEDevice central = BLE.central();
+  int int_temp = 0;
+  if (currentUpdate - prevUpdate >= 1000)
+  {
+    prevUpdate = currentUpdate;
+    for (int i = 0; i < 5; i++)
+    {
+      float tmpVoltage = analogRead(A3) * 3.3 / 1023.0;
+      float temp = 80.336304700162070 * tmpVoltage + -16.081977309562400;
+      temp = temp * 1.8 + 32;
+      int_temp += (int)temp;
+      Serial.println(int_temp);
+      sevseg.refreshDisplay();
+    }
+    Serial.println();
+    int_temp = int_temp / 5;
+    int_temp = int_temp*100;
+    int_temp = int_temp + masterTemp;
+    sevseg.setNumber(int_temp,2);
+    if (central)
+    {
+      Serial.print("Connected to central: ");
+      digitalWrite(LED_BUILTIN, HIGH);
       
-      tempLevelChar.writeValue(batteryLevel);*/
-      // read the input from the thermistor (A2) and TMP (A3):
-       int int_temp = 0;
-
-      for(int i = 0; i < 5; i++) {
-      float tmpVoltage = analogRead(A3)*3.3/1023.0;
-        float temp = 130.0 * tmpVoltage + -59.7;
-      int_temp += (int)temp;  
-      delay(200);  
+      tempLevelChar.writeValue(int_temp);
+      byte value = masterTemp;
+      tempReadChar.readValue(value);
+      if(value != 0){
+        masterTemp = value;
+        Serial.println(value);
       }
-      int_temp = int_temp / 5;
- 
-  // print out the values you read from the thermistor and the TMP to the serial monitor:
-  Serial.print(int_temp);
-  Serial.println();
-        tempLevelChar.writeValue(int_temp);
-        byte value = 0;
-        tempReadChar.readValue(value);
-      Serial.println(value);
-      delay(200);
-
-}
-}
-digitalWrite(LED_BUILTIN, LOW);
-Serial.print("Disconnected from central: ");
-Serial.println(central.address());
+    }
+    //Serial.println(int_temp);
+  } 
+  sevseg.refreshDisplay();
 }
