@@ -54,8 +54,6 @@ void loop()
       float temp = 80.336304700162070 * tmpVoltage + -16.081977309562400;
       temp = temp * 1.8 + 32;
       int_temp += (int)temp;
-      Serial.println(int_temp);
-      sevseg.refreshDisplay();
     }
     Serial.println();
     int_temp = int_temp / 5;
@@ -75,7 +73,7 @@ void loop()
         Serial.println(value);
       }
     }
-    //Serial.println(int_temp);
+    Serial.println(int_temp);
   } 
   sevseg.refreshDisplay();
 }
