@@ -10,7 +10,11 @@ unsigned long prevUpdate = 0;
 int masterTemp = 72;
 const int decrementPin = A5;
 const int incrementPin = A6;
-
+int decrementState = 0;
+int incrementState = 0;
+int displayTemp = 0;
+int displayTempVariances[5];
+int displayTempPos = 0;
 void setup()
 {
   pinMode(decrementPin, INPUT);
@@ -33,19 +37,14 @@ void setup()
     Serial.println("starting BLE failed!");
   }
 
-  BLE.setLocalName("TemperatureMonitor");
+  BLE.setLocalName("Labrador Thermostat");
   BLE.setAdvertisedService(tempService);
   tempService.addCharacteristic(tempLevelChar);
   tempService.addCharacteristic(tempReadChar);
   BLE.addService(tempService);
-
   BLE.advertise();
   Serial.println("Bluetooth device active, waiting for connections...");
 }
-
-int decrementState = 0;
-int incrementState = 0;
-int displayTemp = 1000;
 
 void loop()
 {
@@ -66,7 +65,31 @@ void loop()
     }
     Serial.println();
     int_temp = int_temp / 5;
-    displayTemp = (int_temp * 100) + masterTemp;
+    int_temp = (int_temp * 100) + masterTemp;
+    if (displayTemp == 0 || displayTemp == int_temp)
+    {
+      displayTemp = int_temp;
+    }
+    else
+    {
+      int sameCount = 0;
+      displayTempVariances[displayTempPos++] = int_temp;
+      if (displayTempPos == 9)
+      {
+        for (int i = 0; i < 10; i++)
+        {
+          if (displayTempVariances[i] == displayTemp)
+          {
+            sameCount++;
+          }
+        }
+      }
+      if (sameCount < 4)
+      {
+        displayTemp = int_temp;
+      }
+      displayTempPos = 0;
+    }
     sevseg.setNumber(displayTemp, 2);
     if (central)
     {
@@ -98,6 +121,5 @@ void loop()
       sevseg.setNumber(displayTemp, 2);
     }
   }
-
   sevseg.refreshDisplay();
 }
