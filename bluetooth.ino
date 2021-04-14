@@ -8,11 +8,11 @@ SevSeg sevseg;
 
 unsigned long prevUpdate = 0;
 int masterTemp = 72;
+const int decrementPin = A5;
+const int incrementPin = A6;
 
 void setup()
 {
-  const int decrementPin = A7;
-  const int incrementPin = A6;
   pinMode(decrementPin, INPUT);
   pinMode(incrementPin, INPUT);
   byte numDigits = 4;
@@ -45,6 +45,7 @@ void setup()
 
 int decrementState = 0;
 int incrementState = 0;
+int displayTemp = 1000;
 
 void loop()
 {
@@ -52,6 +53,7 @@ void loop()
 
   BLEDevice central = BLE.central();
   int int_temp = 0;
+
   if (currentUpdate - prevUpdate >= 1000)
   {
     prevUpdate = currentUpdate;
@@ -64,9 +66,8 @@ void loop()
     }
     Serial.println();
     int_temp = int_temp / 5;
-    int_temp = int_temp * 100;
-    int_temp = int_temp + masterTemp;
-    sevseg.setNumber(int_temp, 2);
+    displayTemp = (int_temp * 100) + masterTemp;
+    sevseg.setNumber(displayTemp, 2);
     if (central)
     {
       Serial.print("Connected to central: ");
@@ -81,17 +82,23 @@ void loop()
         Serial.println(value);
       }
     }
-    Serial.println(int_temp);
+    Serial.println(displayTemp);
   }
   decrementState = digitalRead(decrementPin);
   incrementState = digitalRead(incrementPin);
+  Serial.println(decrementState);
+    Serial.println(incrementState);
   if (decrementState == HIGH)
   {
     masterTemp = masterTemp - 1;
+    displayTemp = displayTemp - 1;
+    sevseg.setNumber(displayTemp, 2);
   }
   if (incrementState == HIGH)
   {
-    masterTemp = masterTemp + 1;
+     masterTemp = masterTemp + 1;
+    displayTemp = displayTemp + 1;
+    sevseg.setNumber(displayTemp, 2);
   }
   sevseg.refreshDisplay();
 }
