@@ -15,8 +15,13 @@ int incrementState = 0;
 int displayTemp = 0;
 int displayTempVariances[10];
 int displayTempPos = 0;
+const int coolPin = A1;
+const int heatPin = A0;
 void setup()
 {
+  delay(3000);
+  pinMode(coolPin, OUTPUT);
+  pinMode(heatPin, OUTPUT);
   pinMode(decrementPin, INPUT);
   pinMode(incrementPin, INPUT);
   byte numDigits = 4;
@@ -45,18 +50,36 @@ void setup()
   BLE.advertise();
   Serial.println("Bluetooth device active, waiting for connections...");
 }
+  int int_temp = 0;
 
 void loop()
 {
   unsigned long currentUpdate = millis();
 
   BLEDevice central = BLE.central();
-  int int_temp = 0;
 
+  //Cooling = IN1 = A1
+  //Heating = IN2 = A2
+  if(int_temp != masterTemp && abs(int_temp - masterTemp) > 2) {
+    if(int_temp > masterTemp) {
+      digitalWrite(coolPin, HIGH);
+      digitalWrite(heatPin, LOW);
+
+    }
+    if(int_temp < masterTemp) {
+      digitalWrite(coolPin, LOW);
+      digitalWrite(heatPin, HIGH);
+    }
+  }
+  if(int_temp == masterTemp || abs(int_temp - masterTemp) <= 2) {
+      digitalWrite(coolPin, LOW);
+      digitalWrite(heatPin, LOW);
+  }
   if (currentUpdate - prevUpdate >= 500)
   {
     prevUpdate = currentUpdate;
-    for (int i = 0; i < 1000; i++)
+    int_temp = 0;
+    for (int i = 0; i < 10000; i++)
     {
       float tmpVoltage = analogRead(A3) * 3.3 / 1023.0;
       float temp = 80.336304700162070 * tmpVoltage + -16.081977309562400;
@@ -65,29 +88,8 @@ void loop()
       sevseg.refreshDisplay();
     }
     Serial.println();
-    int_temp = int_temp / 1000;
-    int_temp = (int_temp * 100) + masterTemp;
-    displayTempVariances[displayTempPos++] = int_temp;
-    if (displayTemp == 0)
-    {
-      displayTemp = int_temp;
-    }
-    else if(displayTempPos == 9)
-    {
-      int sameCount = 0;
-        for (int i = 0; i < 10; i++)
-        {
-          if (displayTempVariances[i] == displayTemp)
-          {
-            sameCount++;
-          }
-        }
-      if (sameCount < 6)
-      {
-        displayTemp = int_temp;
-      }
-      displayTempPos = 0;
-    }
+    int_temp = int_temp / 10000;
+    displayTemp = (int_temp * 100) + masterTemp;
     sevseg.setNumber(displayTemp, 2);
     if (central)
     {
